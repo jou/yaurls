@@ -1,0 +1,112 @@
+/* @override 
+	http://localhost:3301/static/yaurls.css
+*/
+
+/* @group General Styles */
+
+body {
+	background-color: white;
+	margin: 0;
+	padding: 0;
+	font-family: "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
+}
+
+a {
+	text-decoration: none;
+	color: #444;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+/* @end */
+
+/* @group Content Area */
+
+div.header {
+	position: relative;
+	background-color: #ecca9b;
+	padding: 0.5em;
+}
+
+div.header h1 {
+	font-size: 3em;
+	margin: 0;
+	padding: 0;
+}
+
+div.header h2 {
+	position: absolute;
+	top: 2.5em;
+	right: 1em;
+	font-size: 1em;
+	margin: 0;
+	padding: 0;
+}
+
+div.content {
+	margin: 0.5em;
+}
+
+/* @group Entry Form */
+
+div.content form {
+	position: relative;
+	display: block;
+	width:  38em;
+	margin: 1em auto;
+	padding-top: 2em;
+	height: 1.5em;
+}
+
+div.longurl label, div.alias label {
+	position: absolute;
+	top: 0em;
+}
+
+div.longurl, div.alias {
+	height: 1em;
+	margin-right: 1em;
+}
+
+div.longurl {
+	display: inline;
+}
+
+div.alias {
+	display: inline;
+}
+
+div.longurl input {
+	width: 30em;
+}
+
+div.alias input {
+	width: 12em;
+}
+
+/* @end */
+
+div.content p {
+	text-align: center;
+}
+
+/* @end */
+
+/* @group Footer */
+
+div.footer {
+	position: fixed;
+	bottom: 0;
+	width: 100%;
+	background-color: #ecca9b;
+	padding: 0.5em;
+	margin: 0;
+}
+
+div.footer p {
+	margin: 0;
+}
+
+/* @end */
