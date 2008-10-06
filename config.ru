@@ -5,6 +5,7 @@ require 'yaurls'
 
 # Uncomment and edit your database settings
 #Camping::Models::Base.establish_connection :adapter => 'mysql', 
+#  :host => 'localhost' #or use :socket '/tmp/mysql.sock' for UNIX socket
 #  :database => 'camping_yourapp', 
 #  :username => 'camper', 
 #  :password => 'secret'
