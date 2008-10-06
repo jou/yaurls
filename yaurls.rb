@@ -142,7 +142,7 @@ module YAURLS::Controllers
       @headers['Content-Type'] = 'text/plain' if plaintext
       
       url = @input['url']
-      code = @input['code']
+      code = @input['alias']
       ip = @env['REMOTE_ADDR']
       
       if blacklist = ShortUrl.is_spammer?(ip)
@@ -248,12 +248,10 @@ module YAURLS::Views
       head do
         title 'srs.li'
         link :rel => 'stylesheet', :type => 'text/css', :href => '/static/yaurls.css'
-        script :src => 'http://ajax.googleapis.com/ajax/libs/prototype/1.6.0.2/prototype.js', :type => 'text/javascript'
-        script :src => '/static/yaurls.js', :type => 'text/javascript'
       end
       body do
         div.header do
-          h1 'srs.li'
+          h1 {a 'srs.li', :href => '/'}
           h2 'YA SRSLY! IT SHORTENS URLS!'
         end
         div.content do
