@@ -4,9 +4,13 @@
 # 
 #  Copyright 2008 Jiayong Ou. All rights reserved.
 
+$: << File.join(File.expand_path(File.dirname(__FILE__)), 'lib')
+
 require 'camping'
 require 'camping/db'
 require 'digest/md5'
+require 'uri'
+require 'dnsbl'
 
 Camping.goes :YAURLS
 
@@ -34,15 +38,88 @@ module YAURLS::Models
     end
   end
 	
-  # class AddSequence < V 1.1
-  #   def self.up
-  #     create_table :sequences do 
+  class AddSequence < V 1.1
+    def self.up
+      create_table :yaurls_sequences
+    end 
+    
+    def self.down
+      drop_table :yaurls_sequences
+    end
+  end
+  
+  class UrlInvalidException < RuntimeError
+    
+  end
   
   # Model class for a short URL
   class ShortUrl < Base
     def long_url=(url)
       write_attribute(:long_url, url)
       write_attribute(:url_hash, Digest::MD5.hexdigest(url))
+    end
+    
+    # Parse URL and raise errors when the URL scheme is not allowed or if the URL is not absolute
+    def self.parse_url(url)
+      uri = URI.parse(url)
+      uri.host.downcase!
+      
+      raise(UrlInvalidException, "URL scheme #{uri.scheme} not allowed.") if !['http', 'https', 'ftp'].include?(uri.scheme)
+      raise(UrlInvalidException, "Absolute URL required") if !uri.host
+      raise(UrlInvalidException, "URL #{uri} is listed as spam in SURBL or URIBL") if self.is_spam?(uri)
+      
+      uri.path = '/' if uri.path.empty?
+      
+      uri
+    end
+    
+    # Checks if url is spam
+    def self.is_spam?(uri)
+      labels = uri.host.split('.')
+      
+      return DNSBL.check_domain(uri.host) if labels.length <= 2
+      
+      for i in (2..labels.length)
+        return true if DNSBL.check_domain(labels[-i, i].join('.'))
+      end
+      
+      false
+    end
+  end
+  
+  # Sequence to generate shorturl code
+  class Sequence < Base
+    @@encode_table = [
+      "L", "-", "V", "C", "0", "6", "5", "W", "Z", "U", "v", "X", "S", "A", "z", "Q", "O", 
+      "8", "l", "4", "T", "F", "Y", "B", "P", "R", "o", "J", "1", "i", "s", "r", "h", "n", 
+      "u", "q", "a", "$", "m", "H", "y", "I", "_", "2", "9", "k", "j", "t", "w", "K", "7", 
+      "x", "d", "G", "e", "=", "g", "E", "p", "M", "f", "b", "N", "3", "D", "c"
+    ]
+  
+    def self.encode_number(n)
+      return @@encode_table[0] if n == 0
+    
+      result = ''
+      base = @@encode_table.length
+    
+      while n > 0
+        remainder = n % base
+        n = n / base
+        result = @@encode_table[remainder] + result
+      end
+      result
+    end
+
+    def self.next
+      seq = self.create
+      code = self.encode_number(seq.id)
+      
+      while ShortUrl.exists?(:code => code)
+        seq = self.create
+        code = self.encode_number(seq.id)
+      end
+      
+      code
     end
   end
 end
@@ -56,20 +133,55 @@ module YAURLS::Controllers
 
   class Create < R '/api/create'
     def get
-      url = "http://blog.orly.ch/"
-      short_url = ShortUrl.create do |u|
-        u.long_url = url
-        u.code = "b"
-        u.creator_ip = "127.0.0.1"
+      plaintext =  @input.key?('plaintext')
+      @headers['Content-Type'] = 'text/plain' if plaintext
+      
+      url = @input['url']
+      code = @input['code']
+      ip = @env['REMOTE_ADDR']
+      
+      if !url
+        @headers['Content-Type'] = 'text/plain'
+        @status = '403'
+        return "No url given!"
       end
       
-      @short_url = short_url
+      begin
+        uri = ShortUrl.parse_url(url)
+      rescue UrlInvalidException, URI::InvalidURIError => e
+        @status = '403'
+        @headers['Content-Type'] = 'text/plain'
+        return e.to_s
+      end
+      
+      short_url = ShortUrl.find(:first, :conditions => ['url_hash = ?', Digest::MD5.hexdigest(uri.to_s)])
+      
+      if !short_url
+        short_url = ShortUrl.create do |u|
+          u.long_url = uri.to_s
+          u.code = code ? code : Sequence.next
+          u.creator_ip = ip
+        end
+      end
+      
+      "http:" + URL(Resolve, short_url.code, '').to_s
     end
   end
   
-  class ReverseLookup < R '/api/reverselookup/(.+)'
-    def get(link_id)
+  class ReverseLookup < R '/api/reverselookup/([^/]+)(.*)'
+    def get(code, more_of_query_string)
+      @headers['Content-Type'] = 'text/plain'
       
+      url = ShortUrl.find(:first, :conditions => ['code = ?', code])
+      if url
+        result = url.long_url + more_of_query_string
+        result += '?'+@env['QUERY_STRING'] if @env['QUERY_STRING'] && !@env['QUERY_STRING'].empty?
+        
+        result
+      else
+        @status = '404';
+        "Code not found"
+      end
     end
   end
 
@@ -90,11 +202,14 @@ module YAURLS::Controllers
     end
   end
 
-  class Resolve < R '/(.+)'
-    def get(code)
+  class Resolve < R '/([^/]+)(.*)'
+    def get(code, more_of_query_string)
       url = ShortUrl.find(:first, :conditions => ['code = ?', code])
       if url
-        @headers['Location'] = url.long_url
+        result = url.long_url + more_of_query_string
+        result += '?'+@env['QUERY_STRING'] if @env['QUERY_STRING'] && !@env['QUERY_STRING'].empty?
+        
+        @headers['Location'] = result
         @status = '301'
       else
         @status = '404'
