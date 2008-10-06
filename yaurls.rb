@@ -60,10 +60,10 @@ module YAURLS::Models
     # Parse URL and raise errors when the URL scheme is not allowed or if the URL is not absolute
     def self.parse_url(url)
       uri = URI.parse(url)
-      uri.host.downcase!
+      uri.host.downcase! if uri.host
       
+      raise(UrlInvalidException, "Absolute URL required. Did you forget http://?") if !uri.host
       raise(UrlInvalidException, "URL scheme #{uri.scheme} not allowed.") if !['http', 'https', 'ftp'].include?(uri.scheme)
-      raise(UrlInvalidException, "Absolute URL required") if !uri.host
       raise(UrlInvalidException, "URL #{uri} is listed as spam in SURBL or URIBL") if self.is_spam?(uri)
       
       uri.path = '/' if uri.path.empty?
