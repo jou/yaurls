@@ -48,9 +48,7 @@ module YAURLS::Models
     end
   end
   
-  class UrlInvalidException < RuntimeError
-    
-  end
+  class UrlInvalidException < RuntimeError; end
   
   # Model class for a short URL
   class ShortUrl < Base
@@ -114,6 +112,7 @@ module YAURLS::Models
       seq = self.create
       code = self.encode_number(seq.id)
       
+      # check if encoded value is already given as a code to a shortcut
       while ShortUrl.exists?(:code => code)
         seq = self.create
         code = self.encode_number(seq.id)
@@ -164,7 +163,12 @@ module YAURLS::Controllers
         end
       end
       
-      "http:" + URL(Resolve, short_url.code, '').to_s
+      if plaintext
+        "http:" + URL(Resolve, short_url.code, '').to_s
+      else
+        @short_url = short_url
+        render :result
+      end
     end
   end
   
@@ -182,6 +186,12 @@ module YAURLS::Controllers
         @status = '404';
         "Code not found"
       end
+    end
+  end
+  
+  class ApiDocs < R '/api/docs'
+    def get
+      render :api_docs
     end
   end
 
@@ -269,7 +279,14 @@ module YAURLS::Views
   
   def result
     link_id = @short_url.code
-    url = "http:" + URL(Resolve, link_id).to_s
+    url = "http:" + URL(Resolve, link_id, '').to_s
     p {"Your short URL: #{a url, :href => url}"}
+  end
+  
+  def api_docs
+    h1 "API"
+    p <<-eos
+      Lorem ipsum
+    eos
   end
 end
