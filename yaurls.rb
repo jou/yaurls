@@ -40,7 +40,7 @@ module YAURLS::Models
 	
   class AddSequence < V 1.1
     def self.up
-      create_table :yaurls_sequences
+      create_table :yaurls_sequences do; end
     end 
     
     def self.down
@@ -83,6 +83,11 @@ module YAURLS::Models
       
       false
     end
+    
+    # Checks if requesting user is spammer
+    def self.is_spammer?(ip)
+      return DNSBL.check_ip(ip)
+    end
   end
   
   # Sequence to generate shorturl code
@@ -113,6 +118,7 @@ module YAURLS::Models
       code = self.encode_number(seq.id)
       
       # check if encoded value is already given as a code to a shortcut
+      # and keep creating until one is free
       while ShortUrl.exists?(:code => code)
         seq = self.create
         code = self.encode_number(seq.id)
@@ -138,6 +144,12 @@ module YAURLS::Controllers
       url = @input['url']
       code = @input['code']
       ip = @env['REMOTE_ADDR']
+      
+      if blacklist = ShortUrl.is_spammer?(ip)
+        @headers['Content-Type'] = 'text/plain'
+        @status = '403'
+        return "#{ip} is blacklisted on #{blacklist}"
+      end
       
       if !url
         @headers['Content-Type'] = 'text/plain'
@@ -222,6 +234,7 @@ module YAURLS::Controllers
         @headers['Location'] = result
         @status = '301'
       else
+        @header['Content-Type'] = 'text/plain'
         @status = '404'
         "Code not found"
       end
@@ -248,8 +261,10 @@ module YAURLS::Views
         end
         div.footer do
           p do
-            "Powered by #{a 'Camping', :href => 'http://code.whytheluckystiff.net/camping/'}
-            and pure caffeine"
+            <<-eos
+              Powered by #{a 'Camping', :href => 'http://code.whytheluckystiff.net/camping/'}, in need of a clever
+              slogan. #{a.orly_link! 'code.orly.ch', :href => 'http://code.orly.ch/'}
+            eos
           end
         end
       end
@@ -268,8 +283,11 @@ module YAURLS::Views
       end
       input.create_buton :type => 'submit', :value => 'GO GO GADGET!'
     end
-    p do
-      "Bookmarklet: #{a "SRSLI!", :href => "javascript:window.location='http:#{URL(Create)}?url='+encodeURIComponent(window.location)"}"
+    p.more do
+      <<-eos
+        Bookmarklet: #{a "SRSLI!", :href => "javascript:window.location='http:#{URL(Create)}?url='+encodeURIComponent(window.location)"} #{span.separator "|"}
+        API: #{a "Documentation", :href => R(ApiDocs)}
+      eos
     end
   end
   
@@ -285,8 +303,32 @@ module YAURLS::Views
   
   def api_docs
     h1 "API"
-    p <<-eos
-      Lorem ipsum
-    eos
+    p "srs.li provides a simple REST interface for your bot-building pleasure"
+    h2 "Create"
+    p do 
+      <<-eos
+        Simply make a GET request to #{b "http:#{URL(Create)}?plaintext&url=http://www.example.com/"} and you'll get your
+        shortened URL as plain text back. The 'plaintext' parameter just has to be present, it's value is ignored.
+      eos
+    end
+    p do
+      <<-eos
+        If everything was alright, you get a HTTP 200. If not, well... shit happens. The response body should explain what
+        went wrong.
+      eos
+    end
+    h2 "Reverse Lookup"
+    p do
+      <<-eos
+        Another API method is doing reverse lookup, that is giving it the short url and getting the long one back. To do that,
+        tell your HTTP client to GET #{b "http:#{URL(ReverseLookup, 'ID', '')}"} (replace ID with the link id, the stuff after
+        the slash after the hostname).
+      eos
+    end
+    p do
+      <<-eos
+        Again, if everything was alright, you get a HTTP 200. If the link id was not found, you'd get a HTTP 404.
+      eos
+    end
   end
 end
