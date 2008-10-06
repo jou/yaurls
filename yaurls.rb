@@ -143,6 +143,7 @@ module YAURLS::Controllers
       
       url = @input['url']
       code = @input['alias']
+      has_code = code && !code.empty?
       ip = @env['REMOTE_ADDR']
       
       if blacklist = ShortUrl.is_spammer?(ip)
@@ -167,10 +168,17 @@ module YAURLS::Controllers
       
       short_url = ShortUrl.find(:first, :conditions => ['url_hash = ?', Digest::MD5.hexdigest(uri.to_s)])
       
+      
+      if has_code && ShortUrl.exists?(:code => code)
+        @status = '403'
+        @headers['Content-Type'] = 'text/plain'
+        return "Alias #{code} is already taken"
+      end
+      
       if !short_url
         short_url = ShortUrl.create do |u|
           u.long_url = uri.to_s
-          u.code = code ? code : Sequence.next
+          u.code = has_code ? code : Sequence.next
           u.creator_ip = ip
         end
       end
