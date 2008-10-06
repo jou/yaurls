@@ -9,6 +9,7 @@ body {
 	margin: 0;
 	padding: 0;
 	font-family: "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
+	font-size: 15pt;
 }
 
 a {
@@ -36,6 +37,11 @@ div.header h1 {
 	padding: 0;
 }
 
+div.header h1 a {
+	text-decoration: none;
+	color: black;
+}
+
 div.header h2 {
 	position: absolute;
 	top: 2.5em;
@@ -54,7 +60,7 @@ div.content {
 div.content form {
 	position: relative;
 	display: block;
-	width:  38em;
+	width:  39em;
 	margin: 1em auto;
 	padding-top: 2em;
 	height: 1.5em;
@@ -62,7 +68,8 @@ div.content form {
 
 div.longurl label, div.alias label {
 	position: absolute;
-	top: 0em;
+	top: 0.75em;
+	font-size: 0.9em;
 }
 
 div.longurl, div.alias {
@@ -83,13 +90,21 @@ div.longurl input {
 }
 
 div.alias input {
-	width: 12em;
+	width: 15em;
+}
+
+input.create_buton {
+	width: 10em;
 }
 
 /* @end */
 
-div.content p {
+div.content p.more {
 	text-align: center;
+}
+
+span.separator {
+	color: #aaa;
 }
 
 /* @end */
@@ -108,5 +123,6 @@ div.footer {
 div.footer p {
 	margin: 0;
 }
+
 
 /* @end */
