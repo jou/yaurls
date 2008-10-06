@@ -234,7 +234,7 @@ module YAURLS::Controllers
         @headers['Location'] = result
         @status = '301'
       else
-        @header['Content-Type'] = 'text/plain'
+        @headers['Content-Type'] = 'text/plain'
         @status = '404'
         "Code not found"
       end
