@@ -155,13 +155,13 @@ module YAURLS::Controllers
       if blacklist = ShortUrl.is_spammer?(ip)
         @headers['Content-Type'] = 'text/plain'
         @status = '403'
-        return "#{ip} is blacklisted on #{blacklist}"
+        return "Error: #{ip} is blacklisted on #{blacklist}"
       end
       
       if !url
         @headers['Content-Type'] = 'text/plain'
         @status = '403'
-        return "No url given!"
+        return "Error: No url given!"
       end
       
       begin
@@ -169,7 +169,7 @@ module YAURLS::Controllers
       rescue UrlInvalidException, URI::InvalidURIError => e
         @status = '403'
         @headers['Content-Type'] = 'text/plain'
-        return e.to_s
+        return "Error: #{e.to_s}"
       end
       
       short_url = ShortUrl.find(:first, :conditions => ['url_hash = ?', Digest::MD5.hexdigest(uri.to_s)])
@@ -178,7 +178,7 @@ module YAURLS::Controllers
       if has_code && ShortUrl.exists?(:code => code)
         @status = '403'
         @headers['Content-Type'] = 'text/plain'
-        return "Alias #{code} is already taken"
+        return "Error: Alias #{code} is already taken"
       end
       
       if !short_url
@@ -210,7 +210,7 @@ module YAURLS::Controllers
         result
       else
         @status = '404';
-        "Code not found"
+        "Error: Code not found"
       end
     end
   end
@@ -233,7 +233,7 @@ module YAURLS::Controllers
       else
         @headers['Content-Type'] = 'text/plain'
         @status = "403"
-        "403 - Invalid path"
+        "Error: 403 - Invalid path"
       end
     end
   end
@@ -250,7 +250,7 @@ module YAURLS::Controllers
       else
         @headers['Content-Type'] = 'text/plain'
         @status = '404'
-        "Code not found"
+        "Error: Code not found"
       end
     end
   end
