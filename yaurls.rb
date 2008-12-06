@@ -253,30 +253,46 @@ module YAURLS::Controllers
         "Error: Code not found"
       end
     end
+    
+    def head(code, more_of_query_string)
+      url = ShortUrl.find(:first, :conditions => ['code = ?', code])
+      if url
+        result = url.long_url + more_of_query_string
+        result += '?'+@env['QUERY_STRING'] if @env['QUERY_STRING'] && !@env['QUERY_STRING'].empty?
+        
+        @headers['Location'] = result
+        @status = '301'
+      else
+        @headers['Content-Type'] = 'text/plain'
+        @status = '404'
+      end
+    end
   end
 end
 
 module YAURLS::Views
   def layout
-    html do
-      head do
-        title 'srs.li'
-        link :rel => 'stylesheet', :type => 'text/css', :href => '/static/yaurls.css'
-      end
-      body do
-        div.header do
-          h1 {a 'srs.li', :href => '/'}
-          h2 'YA SRSLY! IT SHORTENS URLS!'
+    capture do
+      xhtml_transitional do
+        head do
+          title 'srs.li'
+          link :rel => 'stylesheet', :type => 'text/css', :href => '/static/yaurls.css'
         end
-        div.content do
-          self << yield
-        end
-        div.footer do
-          p do
-            <<-eos
-              Powered by #{a 'Camping', :href => 'http://code.whytheluckystiff.net/camping/'}, in need of a clever
-              slogan. #{a.orly_link! 'code.orly.ch', :href => 'http://code.orly.ch/'}
-            eos
+        body do
+          div.header do
+            h1 {a 'srs.li', :href => '/'}
+            h2 'YA SRSLY! IT SHORTENS URLS!'
+          end
+          div.content do
+            self << yield
+          end
+          div.footer do
+            p do
+              <<-eos
+                Powered by #{a 'Camping', :href => 'http://code.whytheluckystiff.net/camping/'}, in need of a clever
+                slogan. #{a.orly_link! 'code.orly.ch', :href => 'http://code.orly.ch/'}
+              eos
+            end
           end
         end
       end
