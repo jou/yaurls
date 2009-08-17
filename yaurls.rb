@@ -6,11 +6,14 @@
 
 $: << File.join(File.expand_path(File.dirname(__FILE__)), 'lib')
 
+require 'activesupport'
 require 'camping'
 require 'camping/db'
 require 'digest/md5'
 require 'uri'
 require 'dnsbl'
+require 'net/http'
+require 'nokogiri'
 
 Camping.goes :YAURLS
 
@@ -88,6 +91,71 @@ module YAURLS::Models
     def self.is_spammer?(ip)
       return DNSBL.check_ip(ip)
     end
+    
+    # check if `rel` or `rev` attribute and its value combined
+    # could be a short url
+    def self.is_short_url_link?(attribute, val)
+      attribute = attribute.to_sym
+      val = val.to_s.downcase
+      case attribute
+        when :rel
+          return %w(shorturl shorturi shortlink).include?(val)
+        when :rev
+          return %w(canonical).include?(val)
+      end
+    end
+    
+    # try to parse Link: response header for short links
+    def self.parse_link_from_header(response)
+      link_header = response['link']
+      url = nil
+      
+      if link_header
+          matches = link_header.match(/<([^>]+)>; (rel|rev)=(.+)$/)
+          if matches
+            url = matches[1] if self.is_short_url_link?(matches[2], matches[3])
+          end
+      end
+      
+      url
+    end
+    
+    # try to parse <link> elements in the response body to find one with
+    # a suitable `rel` or `rev` attribute
+    def self.parse_link_from_body(response)
+      doc = Nokogiri::HTML(response.body)
+      
+      link = doc.css('link[rel], link[rev]').find do |link|
+        if link[:rev]
+          self.is_short_url_link?(:rev, link[:rev])
+        elsif link[:rel]
+          self.is_short_url_link?(:rel, link[:rel])
+        end
+      end
+      
+      return link[:href] if link
+    end
+    
+    # Checks if the target site provides a short URL via rel=shorturl or rev=canonical
+    def self.provided_short_url(uri)
+      return nil unless %w(http https).include?(uri.scheme)
+      
+      short_url = Net::HTTP.start(uri.host, uri.port) do |http|
+        head_response = http.head(uri.request_uri)
+        head_link = self.parse_link_from_header(head_response)
+        return head_link if head_link
+        
+        get_response = http.get(uri.request_uri)
+        get_link = self.parse_link_from_header(get_response)
+        return get_link if get_link
+        
+        if get_response.content_type
+          
+        end
+        body_link = self.parse_link_from_body(get_response)
+        return body_link if body_link
+      end
+    end
   end
   
   # Sequence to generate shorturl code
@@ -143,6 +211,10 @@ module YAURLS::Controllers
   end
 
   class Create < R '/api/create'
+    def display_url(short_url)
+      "http:" + self.URL(Resolve, short_url.code, '').to_s
+    end
+    
     def get
       plaintext =  @input.key?('plaintext')
       @headers['Content-Type'] = 'text/plain' if plaintext
@@ -168,25 +240,33 @@ module YAURLS::Controllers
       
       short_url = ShortUrl.find(:first, :conditions => ['url_hash = ?', Digest::MD5.hexdigest(uri.to_s)])
       
-      
       if has_code && ShortUrl.exists?(:code => code)
         @status = '403'
         @headers['Content-Type'] = 'text/plain'
         return "Error: Alias #{code} is already taken"
       end
       
-      if !short_url
-        short_url = ShortUrl.create do |u|
-          u.long_url = uri.to_s
-          u.code = has_code ? code : Sequence.next
-          u.creator_ip = ip
+      if short_url
+        @short_url = display_url(short_url)
+      else
+        # no short url created yet? check if site provides one
+        provided_url = ShortUrl.provided_short_url(uri)
+        
+        if provided_url
+          @short_url = provided_url
+        else
+          short_url = ShortUrl.create do |u|
+            u.long_url = uri.to_s
+            u.code = has_code ? code : Sequence.next
+            u.creator_ip = ip
+          end
+          @short_url = display_url(short_url)
         end
       end
       
       if plaintext
-        "http:" + URL(Resolve, short_url.code, '').to_s
+        @short_url
       else
-        @short_url = short_url
         render :result
       end
     end
@@ -318,9 +398,7 @@ module YAURLS::Views
   end
   
   def result
-    link_id = @short_url.code
-    url = "http:" + URL(Resolve, link_id, '').to_s
-    p {"Your short URL: #{a url, :href => url}"}
+    p {"Your short URL: #{a @short_url, :href => @short_url, :id => :short_url}"}
   end
   
   def api_docs
