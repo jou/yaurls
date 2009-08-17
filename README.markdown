@@ -4,7 +4,7 @@ Yet Another URL Shortifyer powers [srs.li](http://srs.li), yet another URL short
 
 <del>Best viewed in any browser except Internet Explorer (position: fixed and margin: auto won't work for some reason, will fix it later)</del> Looks normal in IE7 now (added DOCTYPE to HTML output).
 
-License: [[MIT license|license]]    
+License: MIT license (see license.txt)
 Code: <http://github.com/jou/yaurls>
 
 # Install
