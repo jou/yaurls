@@ -152,12 +152,6 @@ module YAURLS::Controllers
       has_code = code && !code.empty?
       ip = @env['REMOTE_ADDR']
       
-      if blacklist = ShortUrl.is_spammer?(ip)
-        @headers['Content-Type'] = 'text/plain'
-        @status = '403'
-        return "Error: #{ip} is blacklisted on #{blacklist}"
-      end
-      
       if !url
         @headers['Content-Type'] = 'text/plain'
         @status = '403'
