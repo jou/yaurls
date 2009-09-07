@@ -140,20 +140,24 @@ module YAURLS::Models
     def self.provided_short_url(uri)
       return nil unless %w(http https).include?(uri.scheme)
       
-      short_url = Net::HTTP.start(uri.host, uri.port) do |http|
-        head_response = http.head(uri.request_uri)
-        head_link = self.parse_link_from_header(head_response)
-        return head_link if head_link
+      begin
+        short_url = Net::HTTP.start(uri.host, uri.port) do |http|
+          head_response = http.head(uri.request_uri)
+          head_link = self.parse_link_from_header(head_response)
+          return head_link if head_link
         
-        get_response = http.get(uri.request_uri)
-        get_link = self.parse_link_from_header(get_response)
-        return get_link if get_link
+          get_response = http.get(uri.request_uri)
+          get_link = self.parse_link_from_header(get_response)
+          return get_link if get_link
         
-        if get_response.content_type
+          if get_response.content_type
           
+          end
+          body_link = self.parse_link_from_body(get_response)
+          return body_link if body_link
         end
-        body_link = self.parse_link_from_body(get_response)
-        return body_link if body_link
+      rescue
+        nil
       end
     end
   end
