@@ -19,7 +19,7 @@ module DNSBL
   end
 
   def self.check_surbl(domain)
-    self.check(domain, 'multi.surbl.org')
+    !!self.check(domain, 'multi.surbl.org').match(/^127.0.0/)
   end
 
   def self.check_ip(ip)
