@@ -11,4 +11,4 @@ require 'yaurls'
 #  :password => 'secret'
 
 YAURLS.create
-run Rack::Adapter::Camping.new(YAURLS)
+run YAURLS

@@ -100,7 +100,8 @@ input.create_buton {
 /* @end */
 
 div.content p.more {
-	text-align: center;
+	width:  39em;
+	margin: auto;
 }
 
 span.separator {

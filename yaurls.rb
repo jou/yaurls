@@ -6,9 +6,8 @@
 
 $: << File.join(File.expand_path(File.dirname(__FILE__)), 'lib')
 
-require 'activesupport'
+require 'active_support'
 require 'camping'
-require 'camping/db'
 require 'digest/md5'
 require 'uri'
 require 'dnsbl'
@@ -17,40 +16,7 @@ require 'nokogiri'
 
 Camping.goes :YAURLS
 
-def YAURLS.create
-  YAURLS::Models.create_schema
-end
-
 module YAURLS::Models
-  # Schema definition
-  class CreateUrls < V 1.0
-    def self.up
-      create_table :yaurls_short_urls do |t|
-        t.string :code, :null => false
-        t.text :long_url, :null => false
-        t.string :url_hash, :null => false
-        t.datetime :created_at, :null => false
-        t.string :creator_ip, :null => false
-      end
-      add_index(:yaurls_short_urls, :code, :unique => true)
-      add_index(:yaurls_short_urls, :url_hash, :unique => true)
-    end
-    
-    def self.down
-      drop_table :yaurls_short_urls
-    end
-  end
-	
-  class AddSequence < V 1.1
-    def self.up
-      create_table :yaurls_sequences do; end
-    end 
-    
-    def self.down
-      drop_table :yaurls_sequences
-    end
-  end
-  
   class UrlInvalidException < RuntimeError; end
   
   # Model class for a short URL
@@ -77,13 +43,13 @@ module YAURLS::Models
     # Checks if url is spam
     def self.is_spam?(uri)
       labels = uri.host.split('.')
-      
+
       return DNSBL.check_domain(uri.host) if labels.length <= 2
-      
+
       for i in (2..labels.length)
         return true if DNSBL.check_domain(labels[-i, i].join('.'))
       end
-      
+
       false
     end
     
@@ -171,6 +137,8 @@ module YAURLS::Models
       "x", "d", "G", "e", "=", "g", "E", "p", "M", "f", "b", "N", "3", "D", "c"
     ]
     
+    @@reserved = %w(api static)
+    
     # Encode a number with @@encode_table. @@encode_table.length is the base and
     # the elements represent the digits
     def self.encode_number(n)
@@ -197,12 +165,41 @@ module YAURLS::Models
       
       # check if encoded value is already given as a code to a shortcut
       # and keep creating until one is free
-      while ShortUrl.exists?(:code => code)
+      while @@reserved.include?(code) || ShortUrl.exists?(:code => code)
         seq = self.create
         code = self.encode_number(seq.id)
       end
       
       code
+    end
+  end
+  
+  # Schema definition
+  class CreateUrls < V 1.0
+    def self.up
+      create_table :yaurls_short_urls do |t|
+        t.string :code, :null => false
+        t.text :long_url, :null => false
+        t.string :url_hash, :null => false
+        t.datetime :created_at, :null => false
+        t.string :creator_ip, :null => false
+      end
+      add_index(:yaurls_short_urls, :code, :unique => true)
+      add_index(:yaurls_short_urls, :url_hash, :unique => true)
+    end
+    
+    def self.down
+      drop_table :yaurls_short_urls
+    end
+  end
+
+  class AddSequence < V 1.1
+    def self.up
+      create_table :yaurls_sequences do; end
+    end 
+    
+    def self.down
+      drop_table :yaurls_sequences
     end
   end
 end
@@ -216,7 +213,7 @@ module YAURLS::Controllers
 
   class Create < R '/api/create'
     def display_url(short_url)
-      "http:" + self.URL(Resolve, short_url.code, '').to_s
+      self.URL(Resolve, short_url.code, '').to_s
     end
     
     def get
@@ -390,10 +387,13 @@ module YAURLS::Views
       input.create_buton :type => 'submit', :value => 'GO GO GADGET!'
     end
     p.more do
-      <<-eos
-        Bookmarklet: #{a "SRSLI!", :href => "javascript:window.location='http:#{URL(Create)}?url='+encodeURIComponent(window.location)"} #{span.separator "|"}
-        API: #{a "Documentation", :href => R(ApiDocs)}
-      eos
+      span do
+        "Bookmarklet: #{a "SRSLI!", :href => "javascript:window.location='#{URL(Create)}?url='+encodeURIComponent(window.location)"}"
+      end
+      span.separator " | "
+      span do
+        "API: #{a "Documentation", :href => R(ApiDocs)}"
+      end
     end
   end
   
@@ -411,7 +411,7 @@ module YAURLS::Views
     h2 "Create"
     p do 
       <<-eos
-        Simply make a GET request to #{b "http:#{URL(Create)}?plaintext&url=http://www.example.com/"} and you'll get your
+        Simply make a GET request to #{b "#{URL(Create)}?plaintext&url=http://www.example.com/"} and you'll get your
         shortened URL as plain text back. The 'plaintext' parameter just has to be present, it's value is ignored.
       eos
     end
@@ -425,7 +425,7 @@ module YAURLS::Views
     p do
       <<-eos
         Another API method is doing reverse lookup, that is giving it the short url and getting the long one back. To do that,
-        tell your HTTP client to GET #{b "http:#{URL(ReverseLookup, 'ID', '')}"} (replace ID with the link id, the stuff after
+        tell your HTTP client to GET #{b "#{URL(ReverseLookup, 'ID', '')}"} (replace ID with the link id, the stuff after
         the slash after the hostname).
       eos
     end
@@ -435,4 +435,8 @@ module YAURLS::Views
       eos
     end
   end
+end
+
+def YAURLS.create
+  YAURLS::Models.create_schema
 end
