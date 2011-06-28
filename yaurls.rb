@@ -223,7 +223,18 @@ module YAURLS::Controllers
       url = @input['url']
       code = @input['alias']
       has_code = code && !code.empty?
-      ip = @env['REMOTE_ADDR']
+
+      x_forwarded_for = @env['HTTP_X_FORWARDED_FOR']
+
+      # Requests probably came from a reverse proxy if it's from localhost
+      # and X-Forwarded-For header is set
+      ip = if x_forwarded_for && @env['REMOTE_ADDR'] == '127.0.0.1' then
+             # Varnish appends ', client_id', so the last one should be the one
+             # varnish handled
+             x_forwarded_for.split(", ").last
+           else
+             @env['REMOTE_ADDR']
+           end
       
       if !url
         @headers['Content-Type'] = 'text/plain'
