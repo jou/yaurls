@@ -19,7 +19,9 @@ module DNSBL
   end
 
   def self.check_surbl(domain)
-    !!self.check(domain, 'multi.surbl.org').match(/^127.0.0/)
+    surbl_result = self.check(domain, 'multi.surbl.org')
+
+    return surbl_result && surbl_result.match(/^127.0.0/)
   end
 
   def self.check_ip(ip)
