@@ -203,7 +203,7 @@ module YAURLS::Controllers
 
   class Create < R '/api/create'
     def display_url(short_url)
-      self.URL(Resolve, short_url.code, '').to_s
+      "http://srs.li/#{short_url.code}"
     end
     
     def get
@@ -394,11 +394,11 @@ module YAURLS::Views
     end
     p.more do
       span do
-        "Bookmarklet: #{a "SRSLI!", :href => "javascript:window.location='#{URL(Create)}?url='+encodeURIComponent(window.location)"}"
+        "Bookmarklet: #{a "SRSLI!", :href => "javascript:window.location='http://srs.li/api/create?url='+encodeURIComponent(window.location)"}"
       end
       span.separator " | "
       span do
-        "API: #{a "Documentation", :href => R(ApiDocs)}"
+        "API: #{a "Documentation", :href => "/api/docs"}"
       end
     end
   end
@@ -417,7 +417,7 @@ module YAURLS::Views
     h2 "Create"
     p do 
       <<-eos
-        Simply make a GET request to #{b "#{URL(Create)}?plaintext&url=http://www.example.com/"} and you'll get your
+        Simply make a GET request to #{b "http://srs.li/api/create?plaintext&url=http://www.example.com/"} and you'll get your
         shortened URL as plain text back. The 'plaintext' parameter just has to be present, it's value is ignored.
       eos
     end
@@ -431,7 +431,7 @@ module YAURLS::Views
     p do
       <<-eos
         Another API method is doing reverse lookup, that is giving it the short url and getting the long one back. To do that,
-        tell your HTTP client to GET #{b "#{URL(ReverseLookup, 'ID', '')}"} (replace ID with the link id, the stuff after
+        tell your HTTP client to GET #{b "http://srs.li/api/reverselookup/ID"} (replace ID with the link id, the stuff after
         the slash after the hostname).
       eos
     end
