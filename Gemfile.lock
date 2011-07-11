@@ -16,6 +16,7 @@ GEM
     builder (2.1.2)
     camping (2.1)
       rack (>= 1.0)
+    dnsbl-client (0.2.3)
     i18n (0.4.2)
     kgio (2.5.0)
     markaby (0.7.1)
@@ -38,6 +39,7 @@ DEPENDENCIES
   activerecord (= 3.0.1)
   activesupport (= 3.0.1)
   camping (= 2.1)
+  dnsbl-client
   markaby (= 0.7.1)
   mysql
   nokogiri (= 1.4.3.1)

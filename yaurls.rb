@@ -10,7 +10,7 @@ require 'active_support'
 require 'camping'
 require 'digest/md5'
 require 'uri'
-require 'dnsbl'
+require 'dnsbl-client'
 require 'net/http'
 require 'nokogiri'
 
@@ -42,20 +42,10 @@ module YAURLS::Models
     
     # Checks if url is spam
     def self.is_spam?(uri)
-      labels = uri.host.split('.')
+      dnsbl_client = DNSBL::Client.new
+      result = dnsbl_client.lookup(uri.host)
 
-      return DNSBL.check_domain(uri.host) if labels.length <= 2
-
-      for i in (2..labels.length)
-        return true if DNSBL.check_domain(labels[-i, i].join('.'))
-      end
-
-      false
-    end
-    
-    # Checks if requesting user is spammer
-    def self.is_spammer?(ip)
-      return DNSBL.check_ip(ip)
+      result && result.length > 0
     end
     
     # check if `rel` or `rev` attribute and its value combined

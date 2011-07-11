@@ -7,5 +7,7 @@ gem "activesupport", "3.0.1"
 gem "nokogiri", "1.4.3.1"
 gem "unicorn"
 
+gem 'dnsbl-client'
+
 gem "mysql", :group => [:production]
 gem "sqlite3", :group => [:development]
