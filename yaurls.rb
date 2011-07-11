@@ -318,6 +318,11 @@ module YAURLS::Controllers
     def get(code, more_of_query_string)
       url = ShortUrl.find(:first, :conditions => ['code = ?', code])
       if url
+        if YAURLS::Models::ShortUrl.is_spam? URI.parse(url.long_url)
+          @status = 403
+          @url = url
+          return render :spam
+        end
         result = url.long_url + more_of_query_string
         result += '?'+@env['QUERY_STRING'] if @env['QUERY_STRING'] && !@env['QUERY_STRING'].empty?
         
@@ -433,6 +438,15 @@ module YAURLS::Views
     p do
       <<-eos
         Again, if everything was alright, you get a HTTP 200. If the link id was not found, you'd get a HTTP 404.
+      eos
+    end
+  end
+
+  def spam
+    h1 "Spam"
+    p do
+      <<-eos
+        #{URI.parse(@url.long_url).host} has been marked as spam
       eos
     end
   end
