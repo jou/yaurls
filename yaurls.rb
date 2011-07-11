@@ -4,8 +4,8 @@
 # 
 #  Copyright 2008 Jiayong Ou. All rights reserved.
 
-$: << File.join(File.expand_path(File.dirname(__FILE__)), 'lib')
-
+require 'rubygems'
+require 'bundler/setup'
 require 'active_support'
 require 'camping'
 require 'digest/md5'

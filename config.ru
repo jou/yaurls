@@ -1,4 +1,5 @@
 #!/usr/bin/ruby
+require 'bundler/setup'
 require 'rubygems'
 require 'rack'
 require 'yaurls'
