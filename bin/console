@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'irb'
+require File.dirname(__FILE__)+'/../yaurls'
+
+Camping::Models::Base.establish_connection :adapter => 'sqlite3', 
+  :database => ENV['HOME']+'/.camping.db'
+
+IRB.start
