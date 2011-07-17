@@ -13,11 +13,31 @@ require 'uri'
 require 'dnsbl-client'
 require 'net/http'
 require 'nokogiri'
+require 'singleton'
 
 Camping.goes :YAURLS
 
 module YAURLS::Models
   class UrlInvalidException < RuntimeError; end
+
+  class OtherShortenerList
+    include Singleton
+
+    attr_accessor :other_shorteners
+
+    def initialize(list_file = File.dirname(__FILE__)+'/data/url-shorteners.txt')
+      @other_shorteners = []
+      File.open(list_file, 'r') do |f|
+        f.each_line do |line|
+          @other_shorteners << line.strip
+        end
+      end
+    end
+
+    def is_shortener?(domain)
+      @other_shorteners.index(domain)
+    end
+  end
   
   # Model class for a short URL
   class ShortUrl < Base
@@ -33,6 +53,7 @@ module YAURLS::Models
       
       raise(UrlInvalidException, "Absolute URL required. Did you forget http://?") if !uri.host
       raise(UrlInvalidException, "URL scheme #{uri.scheme} not allowed.") if !['http', 'https', 'ftp'].include?(uri.scheme)
+      raise(UrlInvalidException, "#{uri.host} is an other URL shortener. Please don't do that.") if OtherShortenerList.instance.is_shortener?(uri.host)
       raise(UrlInvalidException, "URL #{uri} is listed as spam in SURBL or URIBL") if self.is_spam?(uri)
       
       uri.path = '/' if uri.path.empty?
