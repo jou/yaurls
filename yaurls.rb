@@ -55,18 +55,40 @@ module YAURLS::Models
       raise(UrlInvalidException, "URL scheme #{uri.scheme} not allowed.") if !['http', 'https', 'ftp'].include?(uri.scheme)
       raise(UrlInvalidException, "#{uri.host} is an other URL shortener. Please don't do that.") if OtherShortenerList.instance.is_shortener?(uri.host)
       raise(UrlInvalidException, "URL #{uri} is listed as spam in SURBL or URIBL") if self.is_spam?(uri)
+      raise(UrlInvalidException, "URL #{uri} has been blacklisted due to abuse") if self.blacklisted?(uri)
       
       uri.path = '/' if uri.path.empty?
       
       uri
     end
+
+    def self.dnsbl
+      @dnsbl ||= DNSBL::Client.new
+    end
     
     # Checks if url is spam
     def self.is_spam?(uri)
-      dnsbl_client = DNSBL::Client.new
+      dnsbl_client = self.dnsbl
       result = dnsbl_client.lookup(uri.host)
 
       result && result.length > 0
+    end
+
+    def self.blacklist
+      return @blacklist if @blacklist
+
+      @blacklist = []
+      File.open(File.dirname(__FILE__)+'/data/blacklist.txt') do |f|
+        f.each_line do |line|
+          @blacklist << line.strip
+        end
+      end
+
+      @blacklist
+    end
+
+    def self.blacklisted?(uri)
+      self.blacklist.include?(uri.host)
     end
     
     # check if `rel` or `rev` attribute and its value combined
@@ -339,7 +361,8 @@ module YAURLS::Controllers
     def get(code, more_of_query_string)
       url = ShortUrl.find(:first, :conditions => ['code = ?', code])
       if url
-        if YAURLS::Models::ShortUrl.is_spam? URI.parse(url.long_url)
+        uri = URI.parse(url.long_url)
+        if YAURLS::Models::ShortUrl.is_spam?(uri) || YAURLS::Models::ShortUrl.blacklisted?(uri)
           @status = 403
           @url = url
           return render :spam
